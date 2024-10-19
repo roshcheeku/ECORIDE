@@ -1,0 +1,33 @@
+import requests
+from datetime import datetime
+
+def initiate_carpool():
+    driver_name = input("Enter driver's name: ")
+    driver_source = input("Enter driver's source location: ")
+    driver_destination = input("Enter driver's destination location: ")
+    driver_arrival_time = input("Enter driver's arrival time (YYYY-MM-DD HH:MM): ")
+
+    # Convert arrival time to ISO format
+    driver_arrival_time = datetime.strptime(driver_arrival_time, "%Y-%m-%d %H:%M").isoformat()
+
+    # Prepare payload
+    payload = {
+        'name': driver_name,
+        'source': driver_source,
+        'destination': driver_destination,
+        'arrival_time': driver_arrival_time,
+        'route': 'Sample Route'  # You can replace this with actual route data if available
+    }
+
+    # Send a POST request to the backend
+    response = requests.post('http://127.0.0.1:5000/carpool/initiate', json=payload)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        print("Carpool initiated successfully!")
+        print(response.json())  # Print the response from the backend
+    else:
+        print("Failed to initiate carpool. Error:", response.text)
+
+if __name__ == "__main__":
+    initiate_carpool()

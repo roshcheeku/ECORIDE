@@ -1,0 +1,43 @@
+import requests
+
+def list_carpools():
+    # Fetch the list of available carpools from the backend
+    response = requests.get('http://127.0.0.1:5000/carpool/list')
+    if response.status_code == 200:
+        carpools = response.json()
+        if len(carpools) == 0:
+            print("No carpools available at the moment.")
+        else:
+            print("Available Carpools:")
+            for carpool in carpools:
+                print(f"ID: {carpool['id']}, Driver: {carpool['name']}, Source: {carpool['source']}, Destination: {carpool['destination']}, Arrival Time: {carpool['arrival_time']}")
+        return carpools
+    else:
+        print("Failed to fetch carpools.")
+        return []
+
+def accept_carpool():
+    carpools = list_carpools()
+
+    if len(carpools) > 0:
+        carpool_id = int(input("Enter the ID of the carpool you want to join: "))
+        passenger_name = input("Enter your name: ")
+
+        # Prepare the payload
+        payload = {
+            'carpool_id': carpool_id,
+            'passenger_name': passenger_name
+        }
+
+        # Send a POST request to accept the carpool
+        response = requests.post('http://127.0.0.1:5000/carpool/accept', json=payload)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            print("Successfully joined the carpool!")
+            print(response.json())  # Print the updated carpool details
+        else:
+            print("Failed to join the carpool. Error:", response.text)
+
+if __name__ == "__main__":
+    accept_carpool()
