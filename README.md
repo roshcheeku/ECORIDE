@@ -1,13 +1,13 @@
 <h1>Repository Name:Ecoride</h1>
-Team Name:Triple Helix
+<h2>Team Name:Triple Helix</h2>
 
 Project Name:
-EcoRide – Smarter Commutes, Greener Future
+<h1>EcoRide – Smarter Commutes, Greener Future</h1>
 
 Description:We present an innovative Carpooling Solution designed specifically for organizations to streamline employee transportation. Our app fosters community-based commuting by enabling employees to carpool, helping organizations save costs, reduce their carbon footprint, and promote eco-friendly travel.
 
 
-Key features:
+<bold>Key features:</bold>
 Security through Secret Code:
 Only employees with a unique secret code provided by the company can access the app, ensuring restricted and secure access.
 
@@ -29,7 +29,7 @@ Encourages sustainable commuting by reducing vehicle usage, contributing to lowe
 
 
 
-Technologies used:
+<h2>Technologies used:</h2>
 Backend:
 Python is used to build the backend logic, including route matching, distance calculations, and incentive tracking.
 
