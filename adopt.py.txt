@@ -1,0 +1,32 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Load the mock dataset into a DataFrame
+df = pd.read_csv('mock_carpooling_users.csv')
+
+# Calculate total number of users
+total_users = len(df)
+
+# Calculate the number of users who prefer carpooling
+carpool_users = len(df[df['carpool_preference'] == 'Yes'])
+
+# Data for pie chart
+labels = ['Carpooling Users', 'Non-Carpooling Users']
+sizes = [carpool_users, total_users - carpool_users]
+colors = ['#4CAF50', '#FF5722']
+explode = (0.1, 0)  # explode the 1st slice (Carpooling Users)
+
+# Plot pie chart
+plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%',
+        shadow=True, startangle=140)
+
+plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+plt.title('Carpooling Adoption Rate')
+plt.show()
+
+# Calculate the carpooling adoption rate
+adoption_rate = (carpool_users / total_users) * 100
+
+print(f"Total Users: {total_users}")
+print(f"Carpooling Users: {carpool_users}")
+print(f"Carpooling Adoption Rate: {adoption_rate:.2f}%")

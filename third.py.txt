@@ -1,0 +1,29 @@
+from faker import Faker
+import random
+import csv
+
+fake = Faker()
+
+# Simulate 100 users with random names, routes, and schedules
+users = []
+for _ in range(100):
+    user = {
+        'name': fake.name(),
+        'route_start': fake.street_address(),
+        'route_end': fake.street_address(),
+        'commute_time': random.choice(['7:00 AM', '8:00 AM', '9:00 AM']),
+        'carpool_preference': random.choice(['Yes', 'No']),
+    }
+    users.append(user)
+
+# Save the data to a CSV file
+with open('mock_carpooling_users.csv', 'w', newline='') as csvfile:
+    fieldnames = ['name', 'route_start', 'route_end', 'commute_time', 'carpool_preference']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for user in users:
+        writer.writerow(user)
+
+# Print the first 5 entries to verify
+for user in users[:5]:
+    print(user)

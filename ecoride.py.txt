@@ -1,0 +1,99 @@
+import requests
+from datetime import datetime
+import json
+
+GRAPHOPPER_API_KEY = 'a72be5cd-0912-48d6-8eae-089c71ed045e'
+
+def geocode_location(place):
+    """Get the geocode of the location using GraphHopper API."""
+    url = f"https://graphhopper.com/api/1/geocode"
+    params = {
+        'q': place,
+        'locale': 'en',
+        'limit': 1,
+        'key': GRAPHOPPER_API_KEY
+    }
+    
+    response = requests.get(url, params=params)
+    try:
+        data = response.json()
+    except ValueError:
+        print(f"Error parsing JSON response for place: {place}")
+        return None
+
+    if 'hits' in data and data['hits']:
+        lat = data['hits'][0]['point']['lat']
+        lng = data['hits'][0]['point']['lng']
+        return (lat, lng)
+    
+    print(f"No geocode found for place: {place}")
+    return None
+
+def get_route(source, destination):
+    """Get the route between two locations using GraphHopper API."""
+    url = f"https://graphhopper.com/api/1/route"
+    params = {
+        'point': [f"{source[0]},{source[1]}", f"{destination[0]},{destination[1]}"],
+        'vehicle': 'car',
+        'locale': 'en',
+        'key': GRAPHOPPER_API_KEY,
+        'instructions': False
+    }
+    
+    response = requests.get(url, params=params)
+    try:
+        data = response.json()
+    except ValueError:
+        print("Error parsing JSON response.")
+        return []
+
+    if 'paths' in data and data['paths']:
+        path = data['paths'][0]
+        if 'points' in path and isinstance(path['points'], str):
+            # Decode polyline to get coordinates
+            return decode_polyline(path['points'])
+    print("No route found.")
+    return []
+
+def decode_polyline(encoded_points):
+    """Decode the polyline from GraphHopper to a list of coordinates."""
+    import polyline
+    return [(lat, lng) for lng, lat in polyline.decode(encoded_points)]
+
+class Driver:
+    def __init__(self, name, source, destination, arrival_time):
+        self.name = name
+        self.source = geocode_location(source)
+        self.destination = geocode_location(destination)
+        self.arrival_time = arrival_time
+
+        if self.source and self.destination:
+            self.route = get_route(self.source, self.destination)
+        else:
+            print(f"Could not get route for {name}.")
+
+    def initiate_carpool(self):
+        """Send the driver's details to the backend to initiate the carpool."""
+        payload = {
+            'name': self.name,
+            'source': self.source,
+            'destination': self.destination,
+            'arrival_time': self.arrival_time.isoformat(),
+            'route': self.route
+        }
+        response = requests.post('https://your-backend-url/carpool/initiate', json=payload)
+        
+        if response.status_code == 200:
+            print("Carpool initiated successfully.")
+        else:
+            print("Failed to initiate carpool.")
+
+if __name__ == "__main__":
+    driver_name = input("Enter driver's name: ")
+    driver_source = input("Enter driver's source location: ")
+    driver_destination = input("Enter driver's destination location: ")
+    driver_arrival_time = input("Enter driver's arrival time (YYYY-MM-DD HH:MM): ")
+    driver_arrival_time = datetime.strptime(driver_arrival_time, "%Y-%m-%d %H:%M")
+
+    driver = Driver(driver_name, driver_source, driver_destination, driver_arrival_time)
+    driver.initiate_carpool()

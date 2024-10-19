@@ -1,0 +1,33 @@
+import pandas as pd
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+# Load mock dataset
+df = pd.read_csv('mock_carpooling_users.csv')
+
+@app.route('/', methods=['GET'])
+def index():
+    return "Welcome to the Carpooling API!"
+
+@app.route('/users', methods=['GET'])
+def get_users():
+    return df.to_json(orient='records')
+
+@app.route('/carpooling/adoption-rate', methods=['GET'])
+def get_adoption_rate():
+    total_users = len(df)
+    carpool_users = len(df[df['carpool_preference'] == 'Yes'])
+    adoption_rate = (carpool_users / total_users) * 100
+    return jsonify({
+        'total_users': total_users,
+        'carpool_users': carpool_users,
+        'adoption_rate': adoption_rate
+    })
+
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204  # No Content response
+
+if __name__ == "__main__":
+    app.run(debug=True)
