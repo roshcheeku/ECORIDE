@@ -1,0 +1,113 @@
+import requests
+import time
+
+def geocode(address):
+    """Convert an address to latitude and longitude using Nominatim."""
+    url = "https://nominatim.openstreetmap.org/search"
+    headers = {
+        'User-Agent': 'CarpoolingApp/1.0 (your_email@example.com)'  # Replace with your app name and email
+    }
+    params = {
+        'q': address,
+        'format': 'json',
+        'limit': 1  # Get the top result only
+    }
+    
+    time.sleep(1)  # Prevent overuse
+    response = requests.get(url, headers=headers, params=params)
+    
+    if response.status_code == 200 and response.json():
+        location = response.json()[0]
+        lat = float(location['lat'])
+        lon = float(location['lon'])
+        print(f"Geocoded '{address}' to: Latitude = {lat}, Longitude = {lon}")
+        return lat, lon
+    else:
+        print(f"Could not geocode the address: '{address}'. Response: {response.text}")
+        return None, None
+
+def calculate_price(api_key, start_address, end_address, passengers=1, car_type="petrol"):
+    """Calculate price, carbon emission, and savings by carpooling."""
+    start_lat, start_lng = geocode(start_address)
+    end_lat, end_lng = geocode(end_address)
+    
+    if start_lat is None or end_lat is None:
+        print("One of the addresses could not be geocoded.")
+        return None
+
+    url = f"https://graphhopper.com/api/1/route"
+    params = {
+        'point': [f'{start_lat},{start_lng}', f'{end_lat},{end_lng}'],
+        'vehicle': 'car',  # You can change to 'bike', 'foot', etc.
+        'key': api_key
+    }
+
+    print(f"Sending request to GraphHopper with points: {params['point']}")
+
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        distance_meters = data['paths'][0]['distance']  # Distance in meters
+        distance_km = distance_meters / 1000  # Convert to kilometers
+        
+        # Calculate price based on distance
+        price = distance_km * 20
+        
+        # Define car type CO2 emissions per km
+        car_emission_factors = {
+            'electric': 0.0,
+            'hybrid': 0.1,
+            'petrol': 0.21,
+            'diesel': 0.21
+        }
+        
+        co2_per_km_car = car_emission_factors.get(car_type, 0.21)  # Default to petrol
+        total_emission_car = distance_km * co2_per_km_car / passengers  # Divide by passengers
+        
+        # Calculate carbon emission for public transport (bus)
+        co2_per_km_bus = 0.05  # Average CO2 emissions for a bus per passenger in kg/km
+        total_emission_bus = distance_km * co2_per_km_bus
+        
+        # Calculate fuel consumption
+        avg_fuel_consumption_per_100km = 6.0  # Example: 6 liters per 100 km for a car
+        fuel_used = (distance_km / 100) * avg_fuel_consumption_per_100km
+        
+        # Calculate the difference (emission savings by using carpool)
+        emission_savings = total_emission_car - total_emission_bus
+        
+        # Distance threshold for eco-friendly suggestion
+        if distance_km < 2:
+            eco_message = "Consider walking or cycling, it's a short distance!"
+        else:
+            eco_message = "Carpooling helped save CO2 emissions."
+        
+        print(f"Distance: {distance_km:.2f} km")
+        print(f"Carbon emission by private car: {total_emission_car:.2f} kg CO2 (with {passengers} passengers)")
+        print(f"Carbon emission by public transport: {total_emission_bus:.2f} kg CO2")
+        print(f"Fuel used: {fuel_used:.2f} liters")
+        print(f"By carpooling, you helped save: {emission_savings:.2f} kg CO2")
+        print(f"{eco_message}")
+        
+        return price, total_emission_car, emission_savings, fuel_used
+    else:
+        print(f"GraphHopper API returned an error: {response.status_code}. Response: {response.text}")
+        return None
+
+# Example usage:
+api_key = "a72be5cd-0912-48d6-8eae-089c71ed045e"  # Replace with your actual GraphHopper API key
+start_address = input("Enter the starting address (e.g., Vijaynagar, Bengaluru): ")
+end_address = input("Enter the destination address (e.g., Rajajinagar, Bengaluru): ")
+car_type = input("Enter the type of car (electric, hybrid, petrol, diesel): ")
+passengers = int(input("Enter the number of passengers (e.g., 2 for carpool): "))
+
+result = calculate_price(api_key, start_address, end_address, passengers, car_type)
+
+if result is not None:
+    price, total_emission_car, emission_savings, fuel_used = result
+    print(f"The price for the distance is: {price}")
+    print(f"The total carbon emission by car is: {total_emission_car:.2f} kg CO2")
+    print(f"By using carpooling, you saved approximately {emission_savings:.2f} kg of CO2.")
+    print(f"Fuel used: {fuel_used:.2f} liters")
+else:
+    print("Unable to calculate the price or carbon emission.")

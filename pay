@@ -1,0 +1,150 @@
+import requests
+import time
+import random
+import tkinter as tk
+from tkinter import messagebox, ttk
+import cv2
+from pyzbar.pyzbar import decode
+
+def geocode(address):
+    """Convert an address to latitude and longitude using Nominatim."""
+    url = "https://nominatim.openstreetmap.org/search"
+    headers = {
+        'User-Agent': 'CarpoolingApp/1.0 (your_email@example.com)'  # Replace with your app name and email
+    }
+    params = {
+        'q': address,
+        'format': 'json',
+        'limit': 1  # Get the top result only
+    }
+    
+    # Optional: Add a delay to prevent overuse (e.g., 1 second between requests)
+    time.sleep(1)
+    
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200 and response.json():
+        location = response.json()[0]
+        lat = float(location['lat'])
+        lon = float(location['lon'])
+        print(f"Geocoded '{address}' to: Latitude = {lat}, Longitude = {lon}")
+        return lat, lon
+    else:
+        print(f"Could not geocode the address: '{address}'. Response: {response.text}")
+        return None, None
+
+def calculate_price(api_key, start_address, end_address):
+    """Calculate price based on distance between two addresses."""
+    start_lat, start_lng = geocode(start_address)
+    end_lat, end_lng = geocode(end_address)
+    
+    if start_lat is None or end_lat is None:
+        print("One of the addresses could not be geocoded.")
+        return None
+
+    url = f"https://graphhopper.com/api/1/route"
+    params = {
+        'point': [f'{start_lat},{start_lng}', f'{end_lat},{end_lng}'],
+        'vehicle': 'car',  # You can change to 'bike', 'foot', etc.
+        'key': api_key
+    }
+
+    print(f"Sending request to GraphHopper with points: {params['point']}")
+
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        distance_meters = data['paths'][0]['distance']  # Distance in meters
+        distance_km = distance_meters / 1000  # Convert to kilometers
+        price = distance_km * 15
+        print(f"Distance: {distance_km} km")
+        return price
+    else:
+        print(f"GraphHopper API returned an error: {response.status_code}. Response: {response.text}")
+        return None
+
+def open_payment_window(price):
+    """Create and open the payment window."""
+    def process_payment():
+        choice = payment_var.get()
+        if choice == "1":  # Online Payment
+            scanner_input = read_barcode()
+            if scanner_input and simulate_scanner(scanner_input):
+                messagebox.showinfo("Payment Status", "Payment successful! Thank you.")
+            else:
+                messagebox.showerror("Payment Status", "Payment failed. Please try again.")
+        elif choice == "2":  # Cash Payment
+            messagebox.showinfo("Payment Status", "Cash payment done. Thank you for your payment!")
+        else:
+            messagebox.showwarning("Invalid Choice", "Please select a valid payment option.")
+
+        payment_window.destroy()  # Close the payment window
+
+    # Create the main window
+    payment_window = tk.Tk()
+    payment_window.title("Payment Options")
+    payment_window.geometry("400x300")  # Set window size
+    payment_window.config(bg="#f0f0f0")  # Set background color
+
+    # Add a title label
+    title_label = tk.Label(payment_window, text="Payment Options", font=("Arial", 16), bg="#f0f0f0")
+    title_label.pack(pady=10)
+
+    tk.Label(payment_window, text=f"The price for the distance is: {price:.2f} currency units", font=("Arial", 12), bg="#f0f0f0").pack(pady=10)
+
+    payment_var = tk.StringVar()
+    
+    # Create radio buttons for payment options
+    online_payment_rb = tk.Radiobutton(payment_window, text="Online Payment", variable=payment_var, value="1", bg="#f0f0f0")
+    cash_payment_rb = tk.Radiobutton(payment_window, text="Cash Payment", variable=payment_var, value="2", bg="#f0f0f0")
+    online_payment_rb.pack(anchor=tk.W, padx=20)
+    cash_payment_rb.pack(anchor=tk.W, padx=20)
+
+    tk.Button(payment_window, text="Submit Payment", command=process_payment, bg="#4CAF50", fg="white").pack(pady=20)
+
+    payment_window.mainloop()
+
+def read_barcode():
+    """Capture the barcode or QR code using OpenCV."""
+    cap = cv2.VideoCapture(0)  # Use the default camera
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Decode the barcode/QR code
+        decoded_objects = decode(frame)
+        for obj in decoded_objects:
+            barcode_data = obj.data.decode('utf-8')
+            print(f"Scanned: {barcode_data}")
+            cap.release()
+            cv2.destroyAllWindows()
+            return barcode_data
+
+        cv2.imshow("Scanning...", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # Press 'q' to exit
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    return None
+
+def simulate_scanner(scanner_input):
+    """Simulate the result of a scanner input."""
+    # Here we can validate scanner input as needed. 
+    # Simulate a successful payment 70% of the time if input is not empty.
+    if scanner_input:
+        return random.random() < 0.7
+    return False  # If no input, payment fails
+
+# Example usage:
+api_key = "a72be5cd-0912-48d6-8eae-089c71ed045e"  # Replace with your actual GraphHopper API key
+start_address = input("Enter the starting address (e.g., Vijaynagar, Bengaluru): ")
+end_address = input("Enter the destination address (e.g., Rajajinagar, Bengaluru): ")
+
+price = calculate_price(api_key, start_address, end_address)
+
+if price is not None:
+    open_payment_window(price)
+else:
+    print("Unable to calculate the price.")
